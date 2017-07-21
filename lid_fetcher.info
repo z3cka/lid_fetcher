@@ -1,5 +1,5 @@
 name = Lid fetcher
-description = fetches and save Lid's from libcal into their corresponting nodes
+description = fetches and save Lid's from libcal into their corresponding nodes
 package = Custom
 core = 7.x
 
