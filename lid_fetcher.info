@@ -1,0 +1,7 @@
+name = Lid fetcher
+description = fetches and save Lid's from libcal into their corresponting nodes
+package = Custom
+core = 7.x
+
+dependencies[] = wsclient
+dependencies[] = wsclient_rest

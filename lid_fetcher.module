@@ -1,0 +1,80 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function lid_fetcher_menu() {
+  $items = array();
+  $items['admin/lids'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('lid_fetcher_form_lids'),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function lid_fetcher_form_lids($form, &$form_state) {
+  $form['submit_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get lids!'),
+  );
+  return $form;
+}
+
+function lid_fetcher_form_lids_submit($form, &$form_state) {
+  $service_nodes_and_lids = wsclient_service_load('service_lids');
+  try {
+    // call service to get lids from www-test
+    $nodes_and_lids = $service_nodes_and_lids->getLids();
+    drupal_json_output($nodes_and_lids);
+  }
+  catch (WSClientException $exception) {
+    // TODO: log exception to watchdog and maybe to screen (or even #slack)
+    return false;
+  }
+  // TODO: use batch
+  // batch_set('lid_fetcher_batch');
+
+  // put nodes in an array
+  foreach ($nodes_and_lids['nodes'] as $index => $node) {
+    $nodes[$node['node']['Nid']] = $node['node']['Lid'];
+  }
+  // let's load nodes and save them
+  foreach ($nodes as $nid => $value) {
+    $node = node_load($nid);
+    // check for field and update the value
+    if (property_exists($node, 'field_hours')) {
+      $node->field_hours[LANGUAGE_NONE][0]['value'] = $value;
+      field_attach_update('node', $node);
+    }
+  }
+}
+
+// TODO: make batch
+// // batch definition
+// function lid_fetcher_batch() {
+//   // hit json endpoint that gives nids => lids
+//   $nodes_and_lids = wsclient_service_load('service_lids');
+//   return $batch;
+// }
+
+// // batch operation
+// function lid_fetcher_opertaion($nid) {
+// }
+
+/*
+ * Implements hook_default_wsclient_service().
+ */
+function lid_fetcher_default_wsclient_service() {
+  $service = new WSClientServiceDescription();
+  $service->name = 'service_lids';
+  $service->label = 'Get lids for location and destination nodes';
+  $service->url = 'https://www-test.library.ucla.edu/loc-dist-lids/json';
+  $service->type = 'rest';
+  $service->operations['getLids']['operation']['type'] = 'GET';
+  $service->settings['curl options'] = array('Accept: application/json');
+
+  $services[$service->name] = $service;
+  return $services;
+}
